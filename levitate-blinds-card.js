@@ -91,6 +91,9 @@ class LevitateBlindsCard extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this.isDragging = false;
     this.activeRail = null;
+    this.optimisticTimeout = 0;
+    this.optimisticTop = null;
+    this.optimisticBottom = null;
   }
 
   static getConfigElement() {
@@ -225,9 +228,7 @@ class LevitateBlindsCard extends HTMLElement {
       let pctFromTop = (y / rect.height) * 100;
       let position = Math.round(100 - pctFromTop);
       
-      // Hardware limitation clamping: 
-      // Top rail cannot go below bottom rail
-      // Bottom rail cannot go above top rail
+      // Hardware limitation clamping
       if (this.activeRail === 'top') {
         if (position < this.currentBottomPos) {
           position = this.currentBottomPos;
@@ -249,6 +250,14 @@ class LevitateBlindsCard extends HTMLElement {
       
       const entity = this.activeRail === 'top' ? this.config.top_entity : this.config.bottom_entity;
       const position = this.activeRail === 'top' ? this.currentTopPos : this.currentBottomPos;
+      
+      // Optimistic UI update lock to prevent snapping back immediately
+      this.optimisticTimeout = Date.now() + 4000;
+      if (this.activeRail === 'top') {
+        this.optimisticTop = position;
+      } else {
+        this.optimisticBottom = position;
+      }
       
       if (entity && this._hass) {
         this._hass.callService('cover', 'set_cover_position', {
@@ -294,8 +303,28 @@ class LevitateBlindsCard extends HTMLElement {
     }
 
     if (!this.isDragging) {
-      this.currentTopPos = topState.attributes.current_position ?? 0;
-      this.currentBottomPos = bottomState.attributes.current_position ?? 0;
+      const realTop = topState.attributes.current_position ?? 0;
+      const realBottom = bottomState.attributes.current_position ?? 0;
+
+      // Apply optimistic UI logic: ignore rapid state updates for 4 seconds after a drag
+      if (this.optimisticTimeout && Date.now() < this.optimisticTimeout) {
+        this.currentTopPos = this.optimisticTop !== null ? this.optimisticTop : realTop;
+        this.currentBottomPos = this.optimisticBottom !== null ? this.optimisticBottom : realBottom;
+        
+        // If the real state has caught up to our optimistic state, we can unlock early
+        if ((this.optimisticTop === null || Math.abs(realTop - this.optimisticTop) <= 2) &&
+            (this.optimisticBottom === null || Math.abs(realBottom - this.optimisticBottom) <= 2)) {
+          this.optimisticTimeout = 0;
+          this.currentTopPos = realTop;
+          this.currentBottomPos = realBottom;
+        }
+      } else {
+        this.optimisticTimeout = 0;
+        this.optimisticTop = null;
+        this.optimisticBottom = null;
+        this.currentTopPos = realTop;
+        this.currentBottomPos = realBottom;
+      }
       this.updateVisuals();
     }
   }
