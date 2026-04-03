@@ -225,9 +225,18 @@ class LevitateBlindsCard extends HTMLElement {
       let pctFromTop = (y / rect.height) * 100;
       let position = Math.round(100 - pctFromTop);
       
+      // Hardware limitation clamping: 
+      // Top rail cannot go below bottom rail
+      // Bottom rail cannot go above top rail
       if (this.activeRail === 'top') {
+        if (position < this.currentBottomPos) {
+          position = this.currentBottomPos;
+        }
         this.currentTopPos = position;
       } else {
+        if (position > this.currentTopPos) {
+          position = this.currentTopPos;
+        }
         this.currentBottomPos = position;
       }
       this.updateVisuals();
