@@ -273,16 +273,18 @@ class LevitateBlindsCard extends HTMLElement {
     const topY = 100 - this.currentTopPos;
     const bottomY = 100 - this.currentBottomPos;
 
-    this.railTop.style.top = \`calc(\${topY}% - 16px)\`;
-    this.railBottom.style.top = \`calc(\${bottomY}% - 16px)\`;
+    this.railTop.style.top = (topY) + "%";
+    this.railBottom.style.top = (bottomY) + "%";
+    this.railTop.style.marginTop = "-16px";
+    this.railBottom.style.marginTop = "-16px";
 
     const minY = Math.min(topY, bottomY);
     const maxY = Math.max(topY, bottomY);
-    this.fabric.style.top = \`\${minY}%\`;
-    this.fabric.style.bottom = \`\${100 - maxY}%\`;
+    this.fabric.style.top = minY + "%";
+    this.fabric.style.bottom = (100 - maxY) + "%";
     
-    this.topPct.innerText = \`Top: \${this.currentTopPos}%\`;
-    this.botPct.innerText = \`Bot: \${this.currentBottomPos}%\`;
+    this.topPct.innerText = "Top: " + this.currentTopPos + "%";
+    this.botPct.innerText = "Bot: " + this.currentBottomPos + "%";
   }
 
   getCardSize() { return 4; }
