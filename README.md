@@ -9,6 +9,7 @@ Traditional cover cards in Home Assistant only support a single position slider,
 
 ## ✨ Features
 
+- **Visual Editor Support:** Fully editable from the Home Assistant UI! No YAML required.
 - **True-to-Life Visualization:** A dynamic window graphic that shows the actual fabric moving up and down as you adjust the rails.
 - **Dual Independent Sliders:** Vertical sliders for both the Top Rail and Bottom Rail.
 - **Group Support:** Works perfectly with Home Assistant Native Cover Groups to control an entire room's top or bottom rails simultaneously.

@@ -1,7 +1,107 @@
+class LevitateBlindsCardEditor extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+  }
+
+  setConfig(config) {
+    this._config = config;
+    this.render();
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+  }
+
+  render() {
+    if (!this._config) return;
+    
+    this.shadowRoot.innerHTML = `
+      <style>
+        .card-config {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .input-group {
+          display: flex;
+          flex-direction: column;
+        }
+        label {
+          font-size: 14px;
+          color: var(--secondary-text-color);
+          margin-bottom: 8px;
+        }
+        input {
+          padding: 10px;
+          border: 1px solid var(--divider-color);
+          border-radius: 4px;
+          background: var(--card-background-color);
+          color: var(--primary-text-color);
+          font-size: 14px;
+        }
+        input:focus {
+          outline: none;
+          border-color: var(--primary-color);
+        }
+      </style>
+      <div class="card-config">
+        <div class="input-group">
+          <label>Name (Optional)</label>
+          <input type="text" id="name" value="${this._config.name || ''}" placeholder="e.g. Kitchen Blinds">
+        </div>
+        <div class="input-group">
+          <label>Top Rail Entity (Required)</label>
+          <input type="text" id="top_entity" value="${this._config.top_entity || ''}" placeholder="cover.my_blind_top">
+        </div>
+        <div class="input-group">
+          <label>Bottom Rail Entity (Required)</label>
+          <input type="text" id="bottom_entity" value="${this._config.bottom_entity || ''}" placeholder="cover.my_blind_bottom">
+        </div>
+      </div>
+    `;
+
+    const updateConfig = () => {
+      const newConfig = {
+        ...this._config,
+        name: this.shadowRoot.getElementById('name').value,
+        top_entity: this.shadowRoot.getElementById('top_entity').value,
+        bottom_entity: this.shadowRoot.getElementById('bottom_entity').value,
+      };
+      
+      const event = new Event("config-changed", {
+        bubbles: true,
+        composed: true,
+      });
+      event.detail = { config: newConfig };
+      this.dispatchEvent(event);
+    };
+
+    this.shadowRoot.getElementById('name').addEventListener('input', updateConfig);
+    this.shadowRoot.getElementById('top_entity').addEventListener('input', updateConfig);
+    this.shadowRoot.getElementById('bottom_entity').addEventListener('input', updateConfig);
+  }
+}
+customElements.define('levitate-blinds-card-editor', LevitateBlindsCardEditor);
+
+
 class LevitateBlindsCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
+  }
+
+  static getConfigElement() {
+    return document.createElement("levitate-blinds-card-editor");
+  }
+
+  static getStubConfig() {
+    return {
+      type: "custom:levitate-blinds-card",
+      name: "Levitate Blinds",
+      top_entity: "",
+      bottom_entity: ""
+    };
   }
 
   setConfig(config) {
@@ -161,5 +261,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: "levitate-blinds-card",
   name: "Levitate Blinds Card",
-  description: "A specialized card for Top-Down Bottom-Up blinds."
+  description: "A specialized card for Top-Down Bottom-Up blinds.",
+  preview: true
 });
