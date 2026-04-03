@@ -107,9 +107,6 @@ class LevitateBlindsCard extends HTMLElement {
   }
 
   setConfig(config) {
-    if (!config.top_entity || !config.bottom_entity) {
-      throw new Error("Please define top_entity and bottom_entity");
-    }
     this.config = config;
     if (!this.container) {
       this.initDom();
@@ -184,9 +181,15 @@ class LevitateBlindsCard extends HTMLElement {
           color: var(--secondary-text-color);
           font-weight: bold;
         }
+        .error {
+          color: var(--error-color, red);
+          font-size: 14px;
+          text-align: center;
+        }
       </style>
       <ha-card>
         <div class="name">${this.config.name || 'Blind'}</div>
+        <div id="error-msg" class="error" style="display: none;">Please set both top and bottom entities.</div>
         <div class="container" id="container">
           <div class="fabric" id="fabric"></div>
           <div class="rail top" id="rail-top"></div>
@@ -205,6 +208,7 @@ class LevitateBlindsCard extends HTMLElement {
     this.fabric = this.shadowRoot.getElementById('fabric');
     this.topPct = this.shadowRoot.getElementById('top-pct');
     this.botPct = this.shadowRoot.getElementById('bot-pct');
+    this.errorMsg = this.shadowRoot.getElementById('error-msg');
 
     const handlePointerDown = (e, railType) => {
       this.isDragging = true;
@@ -237,10 +241,12 @@ class LevitateBlindsCard extends HTMLElement {
       const entity = this.activeRail === 'top' ? this.config.top_entity : this.config.bottom_entity;
       const position = this.activeRail === 'top' ? this.currentTopPos : this.currentBottomPos;
       
-      this._hass.callService('cover', 'set_cover_position', {
-        entity_id: entity,
-        position: position
-      });
+      if (entity && this._hass) {
+        this._hass.callService('cover', 'set_cover_position', {
+          entity_id: entity,
+          position: position
+        });
+      }
       this.activeRail = null;
     };
 
@@ -257,9 +263,26 @@ class LevitateBlindsCard extends HTMLElement {
   set hass(hass) {
     this._hass = hass;
     if (!this.config) return;
+    
+    if (!this.config.top_entity || !this.config.bottom_entity) {
+      this.container.style.display = 'none';
+      this.shadowRoot.querySelector('.percentages').style.display = 'none';
+      this.errorMsg.style.display = 'block';
+      return;
+    } else {
+      this.container.style.display = 'block';
+      this.shadowRoot.querySelector('.percentages').style.display = 'flex';
+      this.errorMsg.style.display = 'none';
+    }
+
     const topState = hass.states[this.config.top_entity];
     const bottomState = hass.states[this.config.bottom_entity];
-    if (!topState || !bottomState) return;
+    
+    if (!topState || !bottomState) {
+        this.errorMsg.innerText = "Entity not found. Check entity IDs.";
+        this.errorMsg.style.display = 'block';
+        return;
+    }
 
     if (!this.isDragging) {
       this.currentTopPos = topState.attributes.current_position ?? 0;
